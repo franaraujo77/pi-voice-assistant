@@ -62,11 +62,11 @@ ssh-copy-id username@raspberrypi4.local
 
 ## Installation Steps
 
-### 1. ReSpeaker Setup (v6.6) - (Do this first as drivers are a mess to get it to work)
+### 1. ReSpeaker Setup (v6.6) - (Do this first as drivers are a mess to get it to work and need to use a fork) 
 
 ```bash
 sudo apt install git
-git clone https://github.com/respeaker/seeed-voicecard
+git clone https://github.com/HinTak/seeed-voicecard
 cd seeed-voicecard
 git checkout v6.6
 sudo ./install.sh
