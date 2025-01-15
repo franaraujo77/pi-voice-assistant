@@ -1,0 +1,18 @@
+# config/wyoming-openwakeword.service
+[Unit]
+Description=Wyoming openWakeWord
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/opt/voice-assistant-pi/wyoming-openwakeword/script/run \
+    --uri 'tcp://0.0.0.0:10400' \
+    --model 'hey_jarvis' \
+    --threshold '0.5'
+WorkingDirectory=/opt/voice-assistant-pi/wyoming-openwakeword
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=default.target
