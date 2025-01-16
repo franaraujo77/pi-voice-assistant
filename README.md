@@ -127,6 +127,9 @@ script/setup
 #### OpenWakeword Service
 
 Create `/etc/systemd/system/wyoming-openwakeword.service`:
+```bash
+sudo nano /etc/systemd/system/wyoming-openwakeword.service
+```
 
 ```ini
 [Unit]
@@ -146,6 +149,9 @@ WantedBy=default.target
 #### Wyoming Satellite Service
 
 Create `/etc/systemd/system/wyoming-satellite.service`:
+```bash
+sudo nano /etc/systemd/system/wyoming-satellite.service
+```
 
 ```ini
 [Unit]
@@ -184,6 +190,9 @@ sudo apt-get install python3-spidev python3-gpiozero
 ```
 
 Create `/etc/systemd/system/2mic_leds.service`:
+```bash
+sudo nano /home/username/wyoming-satellite/examples/2mic_service.py
+```
 
 ```ini
 [Unit]
@@ -191,7 +200,7 @@ Description=2Mic LEDs
 
 [Service]
 Type=simple
-ExecStart=/home/username/wyoming-satellite/examples/.venv/bin/python3 2mic_service.py --uri 'tcp://127.0.0.1:10500'
+ExecStart=/home/username/wyoming-satellite/examples/.venv/bin/python3 2mic_service.py --uri 'tcp://127.0.0.1:10500' --led-brightness 10
 WorkingDirectory=/home/username/wyoming-satellite/examples
 Restart=always
 RestartSec=1
