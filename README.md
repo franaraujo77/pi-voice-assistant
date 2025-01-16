@@ -1,4 +1,4 @@
-### Pi Setup
+### Pi Setup (This was specifically build for the Pi 4B but should work with most others - Not tested on Pi 5 which may different issues)
 Raspberry Pi Imager
 - Raspberry Pi OS Lite (64-bit)
 
@@ -14,7 +14,7 @@ sudo ./install.sh
 
 -----------------------
 
-### Manual Intsall
+### Manual Install
 
 # Raspberry Pi Voice Assistant Setup Guide
 
