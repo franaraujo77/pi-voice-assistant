@@ -62,9 +62,8 @@ async def main() -> None:
 
     leds = APA102(num_led=NUM_LEDS, global_brightness=args.led_brightness)
     # Initialize LEDs to off
-    leds.set_pixel(0, 0, 0, 0)
-    leds.set_pixel(1, 0, 0, 0)
-    leds.set_pixel(2, 0, 0, 0)
+    for i in range(NUM_LEDS):
+        leds.set_pixel(i, 0, 0, 0)
     leds.show()
 
     # Start server
@@ -76,9 +75,8 @@ async def main() -> None:
         pass
     finally:
         # Ensure LEDs are off when shutting down
-        leds.set_pixel(0, 0, 0, 0)
-        leds.set_pixel(1, 0, 0, 0)
-        leds.set_pixel(2, 0, 0, 0)
+        for i in range(NUM_LEDS):
+            leds.set_pixel(i, 0, 0, 0)
         leds.show()
         leds.cleanup()
         led_power.off()
@@ -109,40 +107,31 @@ class LEDsEventHandler(AsyncEventHandler):
         self.cli_args = cli_args
         self.client_id = str(time.monotonic_ns())
         self.leds = leds
+        self.is_processing = False
         
         # Initialize LEDs to off
         self.color(_BLACK)
         _LOGGER.debug("Client connected: %s", self.client_id)
 
     async def handle_event(self, event: Event) -> bool:
+        """Handle event from satellite."""
         _LOGGER.debug(event)
 
-        if StreamingStarted.is_type(event.type):
-            # Brief yellow flash when streaming starts
-            self.color(_YELLOW)
-            await asyncio.sleep(0.5)
-            self.color(_BLACK)
-        elif Detection.is_type(event.type):
-            # Blue for wake word detection, then off
+        if Detection.is_type(event.type):
+            # Blue for wake word detection
             self.color(_BLUE)
-            await asyncio.sleep(0.5)
-            self.color(_BLACK)
-        elif VoiceStarted.is_type(event.type):
-            # Yellow during voice activity
+            self.is_processing = True
+        elif StreamingStarted.is_type(event.type) and self.is_processing:
+            # Yellow while streaming/processing if wake word was detected
             self.color(_YELLOW)
-            await asyncio.sleep(0.3)
-            self.color(_BLACK)
-        elif Transcript.is_type(event.type):
-            # Brief green flash for transcript
-            self.color(_GREEN)
-            await asyncio.sleep(0.3)
-            self.color(_BLACK)
-        elif StreamingStopped.is_type(event.type):
-            self.color(_BLACK)
+        elif event.type == "synthesize":
+            # When TTS synthesis starts, schedule turning off the LED
+            asyncio.create_task(self.turn_off_after_delay())
         elif RunSatellite.is_type(event.type):
+            self.is_processing = False
             self.color(_BLACK)
         elif SatelliteConnected.is_type(event.type):
-            # Quick green flashes for connection
+            # Quick green flash for connection
             for _ in range(2):
                 self.color(_GREEN)
                 await asyncio.sleep(0.2)
@@ -153,15 +142,21 @@ class LEDsEventHandler(AsyncEventHandler):
             self.color(_RED)
             await asyncio.sleep(0.5)
             self.color(_BLACK)
+            self.is_processing = False
 
         return True
 
+    async def turn_off_after_delay(self):
+        """Turn off LEDs after a short delay."""
+        await asyncio.sleep(5)  # Wait for TTS to start playing
+        self.is_processing = False
+        self.color(_BLACK)
+
     def color(self, rgb: Tuple[int, int, int]) -> None:
+        """Set color of all LEDs."""
         for i in range(NUM_LEDS):
             self.leds.set_pixel(i, rgb[0], rgb[1], rgb[2])
         self.leds.show()
-
-# -----------------------------------------------------------------------------
 
 
 class APA102:
@@ -201,65 +196,21 @@ class APA102:
             self.spi.max_speed_hz = max_speed_hz
 
     def clock_start_frame(self):
-        """Sends a start frame to the LED strip.
-
-        This method clocks out a start frame, telling the receiving LED
-        that it must update its own color now.
-        """
+        """Sends a start frame to the LED strip."""
         self.spi.xfer2([0] * 4)  # Start frame, 32 zero bits
 
     def clock_end_frame(self):
-        """Sends an end frame to the LED strip.
-
-        As explained above, dummy data must be sent after the last real colour
-        information so that all of the data can reach its destination down the line.
-        The delay is not as bad as with the human example above.
-        It is only 1/2 bit per LED. This is because the SPI clock line
-        needs to be inverted.
-
-        Say a bit is ready on the SPI data line. The sender communicates
-        this by toggling the clock line. The bit is read by the LED
-        and immediately forwarded to the output data line. When the clock goes
-        down again on the input side, the LED will toggle the clock up
-        on the output to tell the next LED that the bit is ready.
-
-        After one LED the clock is inverted, and after two LEDs it is in sync
-        again, but one cycle behind. Therefore, for every two LEDs, one bit
-        of delay gets accumulated. For 300 LEDs, 150 additional bits must be fed to
-        the input of LED one so that the data can reach the last LED.
-
-        Ultimately, we need to send additional numLEDs/2 arbitrary data bits,
-        in order to trigger numLEDs/2 additional clock changes. This driver
-        sends zeroes, which has the benefit of getting LED one partially or
-        fully ready for the next update to the strip. An optimized version
-        of the driver could omit the "clockStartFrame" method if enough zeroes have
-        been sent as part of "clockEndFrame".
-        """
-
+        """Sends an end frame to the LED strip."""
         self.spi.xfer2([0xFF] * 4)
 
-        # Round up num_led/2 bits (or num_led/16 bytes)
-        # for _ in range((self.num_led + 15) // 16):
-        #    self.spi.xfer2([0x00])
-
     def set_pixel(self, led_num, red, green, blue, bright_percent=100):
-        """Sets the color of one pixel in the LED stripe.
-
-        The changed pixel is not shown yet on the Stripe, it is only
-        written to the pixel buffer. Colors are passed individually.
-        If brightness is not set the global brightness setting is used.
-        """
+        """Sets the color of one pixel in the LED stripe."""
         if led_num < 0:
             return  # Pixel is invisible, so ignore
         if led_num >= self.num_led:
             return  # again, invisible
 
-        # Calculate pixel brightness as a percentage of the
-        # defined global_brightness. Round up to nearest integer
-        # as we expect some brightness unless set to 0
         brightness = int(ceil(bright_percent * self.global_brightness / 100.0))
-
-        # LED startframe is three "1" bits, followed by 5 brightness bits
         ledstart = (brightness & 0b00011111) | self.LED_START
 
         start_index = 4 * led_num
@@ -268,40 +219,9 @@ class APA102:
         self.leds[start_index + self.rgb[1]] = green
         self.leds[start_index + self.rgb[2]] = blue
 
-    def set_pixel_rgb(self, led_num, rgb_color, bright_percent=100):
-        """Sets the color of one pixel in the LED stripe.
-
-        The changed pixel is not shown yet on the Stripe, it is only
-        written to the pixel buffer.
-        Colors are passed combined (3 bytes concatenated)
-        If brightness is not set the global brightness setting is used.
-        """
-        self.set_pixel(
-            led_num,
-            (rgb_color & 0xFF0000) >> 16,
-            (rgb_color & 0x00FF00) >> 8,
-            rgb_color & 0x0000FF,
-            bright_percent,
-        )
-
-    def rotate(self, positions=1):
-        """Rotate the LEDs by the specified number of positions.
-
-        Treating the internal LED array as a circular buffer, rotate it by
-        the specified number of positions. The number could be negative,
-        which means rotating in the opposite direction.
-        """
-        cutoff = 4 * (positions % self.num_led)
-        self.leds = self.leds[cutoff:] + self.leds[:cutoff]
-
     def show(self):
-        """Sends the content of the pixel buffer to the strip.
-
-        Todo: More than 1024 LEDs requires more than one xfer operation.
-        """
+        """Sends the content of the pixel buffer to the strip."""
         self.clock_start_frame()
-        # xfer2 kills the list, unfortunately. So it must be copied first
-        # SPI takes up to 4096 Integers. So we are fine for up to 1024 LEDs.
         data = list(self.leds)
         while data:
             self.spi.xfer2(data[:32])
@@ -310,11 +230,8 @@ class APA102:
 
     def cleanup(self):
         """Release the SPI device; Call this method at the end"""
+        self.spi.close()
 
-        self.spi.close()  # Close SPI port
-
-
-# -----------------------------------------------------------------------------
 
 if __name__ == "__main__":
     try:
