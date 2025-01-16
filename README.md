@@ -271,3 +271,12 @@ aplay -D plughw:CARD=seeed2micvoicec,DEV=0 test.wav
    - Verify OpenWakeword service is running
    - Check network connectivity between services
    - Verify wake word configuration
+
+
+# Add better LED control
+
+Terminal
+scp C:\Users\username\Documents\Github\pi-voice-assistant\config\2mic_service.py username@raspberrypi4:/home/username/wyoming-satellite/examples/2mic_service.py
+
+Pi Shh
+sudo systemctl restart 2mic_leds
