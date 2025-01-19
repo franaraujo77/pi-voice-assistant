@@ -14,9 +14,9 @@ sudo ./install.sh
 
 -----------------------
 
-### Manual Install
+# Manual Install
 
-# Raspberry Pi Voice Assistant Setup Guide
+## Raspberry Pi Voice Assistant Setup Guide
 
 A comprehensive guide for setting up a voice assistant system using Wyoming Satellite and OpenWakeword on a Raspberry Pi with ReSpeaker microphone support.
 
