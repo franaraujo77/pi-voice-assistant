@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Controls the LEDs on the ReSpeaker 2mic HAT."""
+"""Controls the LEDs and sounds on the ReSpeaker 2mic HAT."""
 import argparse
 import asyncio
 import logging
 import time
+import subprocess
+import os
 from functools import partial
 from math import ceil
 from typing import Tuple
@@ -36,6 +38,20 @@ RGB_MAP = {
     "bgr": [1, 2, 3],
 }
 
+async def play_sound(sound_file: str):
+    """Play a sound file using aplay."""
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            'aplay',
+            '-D',
+            'plughw:CARD=seeed2micvoicec,DEV=0',
+            sound_file,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        await proc.communicate()
+    except Exception as e:
+        _LOGGER.error(f"Error playing sound: {e}")
 
 async def main() -> None:
     """Main entry point."""
@@ -49,10 +65,19 @@ async def main() -> None:
         default=31,
         help="LED brightness (integer from 1 to 31)",
     )
+    parser.add_argument(
+        "--sounds-dir",
+        type=str,
+        default="/home/dihan/sounds",
+        help="Directory containing sound files",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
     _LOGGER.debug(args)
+
+    # Create sounds directory if it doesn't exist
+    os.makedirs(args.sounds_dir, exist_ok=True)
 
     _LOGGER.info("Ready")
 
@@ -91,7 +116,6 @@ _YELLOW = (255, 255, 0)
 _BLUE = (0, 0, 255)
 _GREEN = (0, 255, 0)
 
-
 class LEDsEventHandler(AsyncEventHandler):
     """Event handler for clients."""
 
@@ -108,6 +132,8 @@ class LEDsEventHandler(AsyncEventHandler):
         self.client_id = str(time.monotonic_ns())
         self.leds = leds
         self.is_processing = False
+        self.sounds_dir = cli_args.sounds_dir
+        self.error_task = None  # To store the error handling task
         
         # Initialize LEDs to off
         self.color(_BLACK)
@@ -117,10 +143,18 @@ class LEDsEventHandler(AsyncEventHandler):
         """Handle event from satellite."""
         _LOGGER.debug(event)
 
+        # Cancel any existing error task
+        if self.error_task and not self.error_task.done():
+            self.error_task.cancel()
+
         if Detection.is_type(event.type):
-            # Blue for wake word detection
+            # Blue for wake word detection and play chime
             self.color(_BLUE)
             self.is_processing = True
+            await play_sound(os.path.join(self.sounds_dir, "aha.wav"))
+        elif event.type == "error" and event.data.get("code") == "stt-no-text-recognized":
+            # Handle no text recognized error
+            self.error_task = asyncio.create_task(self.handle_no_text_error())
         elif StreamingStarted.is_type(event.type) and self.is_processing:
             # Yellow while streaming/processing if wake word was detected
             self.color(_YELLOW)
@@ -146,6 +180,20 @@ class LEDsEventHandler(AsyncEventHandler):
 
         return True
 
+    async def handle_no_text_error(self):
+        """Handle the no text recognized error with red light for 5 seconds."""
+        try:
+            self.color(_RED)
+            await asyncio.sleep(5)
+            self.color(_BLACK)
+            self.is_processing = False
+        except asyncio.CancelledError:
+            # If this task is cancelled, ensure LEDs are in correct state
+            if self.is_processing:
+                self.color(_YELLOW)
+            else:
+                self.color(_BLACK)
+
     async def turn_off_after_delay(self):
         """Turn off LEDs after a short delay."""
         await asyncio.sleep(5)  # Wait for TTS to start playing
@@ -157,7 +205,6 @@ class LEDsEventHandler(AsyncEventHandler):
         for i in range(NUM_LEDS):
             self.leds.set_pixel(i, rgb[0], rgb[1], rgb[2])
         self.leds.show()
-
 
 class APA102:
     """
