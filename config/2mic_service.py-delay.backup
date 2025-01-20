@@ -135,7 +135,7 @@ class LEDsEventHandler(AsyncEventHandler):
         self.sounds_dir = cli_args.sounds_dir
         self.error_task = None
         self.streaming = False
-        self.timeout_task = None
+        self.timeout_task = None  # New task for handling timeouts
         
         # Initialize LEDs to off
         self.color(_BLACK)
@@ -165,9 +165,6 @@ class LEDsEventHandler(AsyncEventHandler):
                 
         elif StreamingStopped.is_type(event.type):
             self.streaming = False
-            # If we're still processing but no error occurred, reset state
-            if self.is_processing and not self.error_task:
-                self.reset_state()
             
         elif event.type == "error" and event.data.get("code") == "stt-no-text-recognized":
             # Cancel any existing tasks
@@ -183,8 +180,6 @@ class LEDsEventHandler(AsyncEventHandler):
             # Cancel timeout if still running
             if self.timeout_task and not self.timeout_task.done():
                 self.timeout_task.cancel()
-            # Reset streaming state and keep processing state for TTS
-            self.streaming = False
             asyncio.create_task(self.turn_off_after_delay())
             
         elif RunSatellite.is_type(event.type):
@@ -229,12 +224,12 @@ class LEDsEventHandler(AsyncEventHandler):
             pass
         finally:
             self.reset_state()
-            self.error_task = None  # Clear error task reference
 
     async def turn_off_after_delay(self):
         """Turn off LEDs after a short delay."""
         await asyncio.sleep(5)
-        self.reset_state()
+        if not self.streaming:
+            self.reset_state()
 
     def reset_state(self):
         """Reset all state flags and turn off LEDs."""
@@ -247,7 +242,7 @@ class LEDsEventHandler(AsyncEventHandler):
         for i in range(NUM_LEDS):
             self.leds.set_pixel(i, rgb[0], rgb[1], rgb[2])
         self.leds.show()
-        
+
 class APA102:
     """
     Driver for APA102 LEDS (aka "DotStar").
