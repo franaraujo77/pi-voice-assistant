@@ -191,7 +191,7 @@ sudo apt-get install python3-spidev python3-gpiozero
 
 Create `/etc/systemd/system/2mic_leds.service`:
 ```bash
-sudo nano /home/username/wyoming-satellite/examples/2mic_service.py
+sudo nano /etc/systemd/system/wyoming-satellite.service
 ```
 
 ```ini
@@ -209,6 +209,7 @@ RestartSec=1
 WantedBy=default.target
 ```
 
+<!-- sudo nano /home/username/wyoming-satellite/examples/2mic_service.py -->
 ### 7. Enable and Start Services
 
 ```bash

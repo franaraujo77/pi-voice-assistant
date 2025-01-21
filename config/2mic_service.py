@@ -169,15 +169,18 @@ class LEDsEventHandler(AsyncEventHandler):
             if self.is_processing and not self.error_task:
                 self.reset_state()
             
-        elif event.type == "error" and event.data.get("code") == "stt-no-text-recognized":
-            # Cancel any existing tasks
-            if self.timeout_task and not self.timeout_task.done():
-                self.timeout_task.cancel()
-            if self.error_task and not self.error_task.done():
-                self.error_task.cancel()
-                
-            self.streaming = False
-            self.error_task = asyncio.create_task(self.handle_no_text_error())
+        elif event.type == "error":
+            # Handle both error types
+            error_code = event.data.get("code", "")
+            if error_code in ["stt-no-text-recognized", "stt-stream-failed"]:
+                # Cancel any existing tasks
+                if self.timeout_task and not self.timeout_task.done():
+                    self.timeout_task.cancel()
+                if self.error_task and not self.error_task.done():
+                    self.error_task.cancel()
+                    
+                self.streaming = False
+                self.error_task = asyncio.create_task(self.handle_no_text_error())
             
         elif event.type == "synthesize":
             # Cancel timeout if still running
@@ -206,7 +209,6 @@ class LEDsEventHandler(AsyncEventHandler):
             self.color(_BLACK)
 
         return True
-
     async def handle_timeout(self):
         """Handle timeout after wake word detection."""
         try:
