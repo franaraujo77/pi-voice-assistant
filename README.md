@@ -7,7 +7,7 @@ Raspberry Pi Imager
 # Auto install - Clone this repo to your Pi and
 
 ```bash
-git clone https://github.com/dihan/pi-voice-assistant
+git clone [https://github.com/franaraujo77/pi-voice-assistant]
 cd pi-voice-assistant
 chmod +x install.sh
 sudo ./install.sh
