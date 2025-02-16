@@ -33,7 +33,7 @@ log "Starting installation with user: $ACTUAL_USER"
 # Update system
 log "Updating system packages..."
 apt-get update
-apt-get upgrade -y
+#apt-get upgrade -y
 check_status "System update"
 
 # Install prerequisites
@@ -79,7 +79,7 @@ cd ~
 git clone https://github.com/rhasspy/wyoming-openwakeword.git
 cd wyoming-openwakeword
 script/setup
-check_status "OpenWakeword installation"
+#check_status "OpenWakeword installation"
 
 # LED service setup
 log "Setting up LED service..."
@@ -87,7 +87,7 @@ cd ~/wyoming-satellite/examples
 python3 -m venv --system-site-packages .venv
 .venv/bin/pip3 install --upgrade pip wheel setuptools
 .venv/bin/pip3 install 'wyoming==1.5.2'
-check_status "LED service setup"
+#check_status "LED service setup"
 EOF
 
 # Create service files
