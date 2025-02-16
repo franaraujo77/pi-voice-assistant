@@ -8,6 +8,7 @@ Raspberry Pi Imager
 
 ```bash
 git clone https://github.com/dihan/pi-voice-assistant
+cd pi-voice-assistant
 chmod +x install.sh
 sudo ./install.sh
 ```
