@@ -46,7 +46,7 @@ log "Setting up ReSpeaker..."
 cd /tmp
 git clone https://github.com/respeaker/seeed-voicecard
 cd seeed-voicecard
-git checkout v6.6
+git checkout v4.1
 ./install.sh
 check_status "ReSpeaker setup"
 
