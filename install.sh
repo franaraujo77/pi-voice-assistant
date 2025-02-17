@@ -70,6 +70,7 @@ pip3 install -f 'https://synesthesiam.github.io/prebuilt-apps/' \
     -r requirements_audio_enhancement.txt \
     -r requirements_vad.txt
 pip install .
+.venv/bin/pip3 install 'pysilero-vad==1.0.0'
 deactivate
 check_status "Wyoming Satellite installation"
 
@@ -87,6 +88,7 @@ cd ~/wyoming-satellite/examples
 python3 -m venv --system-site-packages .venv
 .venv/bin/pip3 install --upgrade pip wheel setuptools
 .venv/bin/pip3 install 'wyoming==1.5.2'
+.venv/bin/pip3 install 'pixel-ring'
 #check_status "LED service setup"
 EOF
 
@@ -100,7 +102,9 @@ Description=Wyoming openWakeWord
 
 [Service]
 Type=simple
-ExecStart=${USER_HOME}/wyoming-openwakeword/script/run --uri 'tcp://0.0.0.0:10400'
+ExecStart=${USER_HOME}/wyoming-openwakeword/script/run \
+    --preload-model 'hey_jarvis' \
+    --uri 'tcp://0.0.0.0:10400'
 WorkingDirectory=${USER_HOME}/wyoming-openwakeword
 Restart=always
 RestartSec=1
@@ -121,8 +125,15 @@ Requires=wyoming-openwakeword.service
 Type=simple
 ExecStart=${USER_HOME}/wyoming-satellite/script/run \
   --debug \
-  --name 'my satellite' \
+  --vad \
+  --name '${HOSTNAME}' \
   --uri 'tcp://0.0.0.0:10700' \
+  --mic-auto-gain 5 \
+  --mic-noise-suppression 2 \
+  --wake-word-name 'hey_jarvis' \
+  --awake-wav awake.wav \
+  --done-wav done.wav \
+  --timer-finished-wav timer_finished.wav \
   --mic-command 'arecord -D plughw:CARD=seeed2micvoicec,DEV=0 -r 16000 -c 1 -f S16_LE -t raw' \
   --snd-command 'aplay -D plughw:CARD=seeed2micvoicec,DEV=0 -r 22050 -c 1 -f S16_LE -t raw'
 WorkingDirectory=${USER_HOME}/wyoming-satellite
@@ -140,7 +151,8 @@ Description=2Mic LEDs
 
 [Service]
 Type=simple
-ExecStart=${USER_HOME}/wyoming-satellite/examples/.venv/bin/python3 2mic_service.py --uri 'tcp://127.0.0.1:10500'
+ExecStart=${USER_HOME}/wyoming-satellite/examples/.venv/bin/python3 2mic_service.py \
+    --uri 'tcp://127.0.0.1:10500'
 WorkingDirectory=${USER_HOME}/wyoming-satellite/examples
 Restart=always
 RestartSec=1
