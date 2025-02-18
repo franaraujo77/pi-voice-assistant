@@ -41,27 +41,17 @@ log "Installing required packages..."
 apt-get install --no-install-recommends -y git python3-venv libopenblas-dev python3-spidev python3-gpiozero
 check_status "Package installation"
 
-# Setup ReSpeaker
-log "Setting up ReSpeaker..."
-cd /tmp
-git clone https://github.com/respeaker/seeed-voicecard
-cd seeed-voicecard
-git checkout v4.1
-./install.sh
-check_status "ReSpeaker setup"
-
-# Add user to audio group
-log "Adding user to audio group..."
-usermod -aG audio $ACTUAL_USER
-check_status "Audio group setup"
-
-# Switch to user context for git clones and python setup
-su - $ACTUAL_USER << 'EOF'
 # Wyoming Satellite setup
-log "Setting up Wyoming Satellite..."
+log "Clonning Wyoming Satellite..."
 cd ~
 git clone https://github.com/rhasspy/wyoming-satellite.git
 cd wyoming-satellite/
+
+log "Setting up ReSpeaker..."
+sudo bash etc/install-respeaker-drivers.sh
+check_status "ReSpeaker setup"
+
+log "Setting up Wyoming Satellite..."
 python3 -m venv .venv
 source .venv/bin/activate
 pip3 install --upgrade pip wheel setuptools
