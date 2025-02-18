@@ -66,10 +66,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip3 install --upgrade pip wheel setuptools
 pip3 install -f 'https://synesthesiam.github.io/prebuilt-apps/' \
-    -r requirements.txt \
-    -r requirements_audio_enhancement.txt \
-    -r requirements_vad.txt
-pip install .
+    -e '.[all]'
 .venv/bin/pip3 install 'pysilero-vad==1.0.0'
 deactivate
 check_status "Wyoming Satellite installation"
