@@ -93,7 +93,8 @@ Description=Wyoming openWakeWord
 Type=simple
 ExecStart=${USER_HOME}/wyoming-openwakeword/script/run \
     --preload-model 'hey_jarvis' \
-    --uri 'tcp://0.0.0.0:10400'
+    --uri 'tcp://0.0.0.0:10400' \
+    --threshold 0.9
 WorkingDirectory=${USER_HOME}/wyoming-openwakeword
 Restart=always
 RestartSec=1
@@ -109,6 +110,7 @@ Description=Wyoming Satellite
 Wants=network-online.target
 After=network-online.target
 Requires=wyoming-openwakeword.service
+Requires=2mic_leds.service
 
 [Service]
 Type=simple
@@ -117,12 +119,14 @@ ExecStart=${USER_HOME}/wyoming-satellite/script/run \
   --vad \
   --name '${HOSTNAME}' \
   --uri 'tcp://0.0.0.0:10700' \
+  --event-uri 'tcp://127.0.0.1:10500' \
+  --wake-uri 'tcp://127.0.0.1:10400' \
   --mic-auto-gain 5 \
   --mic-noise-suppression 2 \
   --wake-word-name 'hey_jarvis' \
-  --awake-wav awake.wav \
-  --done-wav done.wav \
-  --timer-finished-wav timer_finished.wav \
+  --awake-wav sounds/awake.wav \
+  --done-wav sounds/done.wav \
+  --timer-finished-wav sounds/timer_finished.wav \
   --mic-command 'arecord -D plughw:CARD=seeed2micvoicec,DEV=0 -r 16000 -c 1 -f S16_LE -t raw' \
   --snd-command 'aplay -D plughw:CARD=seeed2micvoicec,DEV=0 -r 22050 -c 1 -f S16_LE -t raw'
 WorkingDirectory=${USER_HOME}/wyoming-satellite
