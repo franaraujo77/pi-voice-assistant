@@ -41,6 +41,8 @@ log "Installing required packages..."
 apt-get install --no-install-recommends -y git python3-venv libopenblas-dev python3-spidev python3-gpiozero
 check_status "Package installation"
 
+# Switch to user context for git clones and python setup
+su - $ACTUAL_USER << 'EOF'
 # Wyoming Satellite setup
 log "Clonning Wyoming Satellite..."
 cd ~
